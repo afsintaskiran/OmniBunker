@@ -1,0 +1,110 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tooltip } from "@/components/ui/tooltip";
+import { Tabs, Tab } from "@/components/ui/tabs";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend, LineChart, Line } from "recharts";
+import { Alert } from "@/components/ui/alert";
+import { motion } from "framer-motion";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+
+export default function BackupDashboard() {
+  const [logFilters, setLogFilters] = useState({ date: "", deviceType: "" });
+  const [filteredLogs, setFilteredLogs] = useState([]);
+  const [logData, setLogData] = useState([]);
+  const [userRole, setUserRole] = useState("Viewer");
+  const [backupStats, setBackupStats] = useState({ avgTime: 0, successRate: 0, peakHour: "" });
+  const [criticalAlerts, setCriticalAlerts] = useState([]);
+
+  useEffect(() => {
+    fetchLogs();
+    fetchUserRole();
+    calculateBackupStats();
+    const interval = setInterval(fetchLogs, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchLogs = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/logs");
+      setLogData(response.data);
+      setFilteredLogs(response.data);
+      calculateBackupStats(response.data);
+      checkCriticalAlerts(response.data);
+    } catch (error) {
+      console.error("Failed to fetch logs.", error);
+    }
+  };
+
+  const fetchUserRole = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/user-role");
+      setUserRole(response.data.role);
+    } catch (error) {
+      console.error("Failed to fetch user role.", error);
+    }
+  };
+
+  const calculateBackupStats = (logs = logData) => {
+    if (!logs.length) return;
+    
+    const durations = logs.map(log => log.duration).filter(Boolean);
+    const avgTime = durations.length ? (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(2) : 0;
+    
+    const successCount = logs.filter(log => log.status === "success").length;
+    const successRate = logs.length ? ((successCount / logs.length) * 100).toFixed(2) : 0;
+    
+    const hours = logs.map(log => new Date(log.timestamp).getHours());
+    const peakHour = hours.length ? hours.sort((a, b) => hours.filter(h => h === a).length - hours.filter(h => h === b).length).pop() : "N/A";
+    
+    setBackupStats({ avgTime, successRate, peakHour });
+  };
+
+  const checkCriticalAlerts = (logs) => {
+    const errors = logs.filter(log => log.status === "failed");
+    setCriticalAlerts(errors);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Backup Report", 20, 10);
+    autoTable(doc, { html: "#logTable" });
+    doc.save("backup_report.pdf");
+  };
+
+  const exportToExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(filteredLogs);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Logs");
+    XLSX.writeFile(wb, "backup_report.xlsx");
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="flex flex-col items-center gap-6 p-6 bg-gray-100 min-h-screen">
+      {criticalAlerts.length > 0 && (
+        <Alert variant="destructive" className="w-full text-center">
+          Critical Errors Detected! {criticalAlerts.length} failed backups.
+        </Alert>
+      )}
+      <Card className="w-full p-6 shadow-lg bg-white rounded-lg">
+        <CardContent>
+          <h2 className="text-2xl font-bold mb-4">Backup Summary</h2>
+          <div className="grid grid-cols-3 gap-6 text-center text-lg font-semibold">
+            <div className="bg-green-200 p-4 rounded-lg shadow">Avg Backup Time: {backupStats.avgTime} sec</div>
+            <div className="bg-blue-200 p-4 rounded-lg shadow">Success Rate: {backupStats.successRate}%</div>
+            <div className="bg-yellow-200 p-4 rounded-lg shadow">Peak Hour: {backupStats.peakHour}:00</div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
