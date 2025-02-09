@@ -1,0 +1,63 @@
+# Admin Guide - Backup Automation System (v1.0.0)
+
+## Introduction
+This guide provides an overview of administrative functionalities in the Backup Automation System. Administrators can manage users, configure system settings, and monitor backup processes.
+
+## 1. Admin Dashboard
+Upon login, the admin has access to the **Admin Dashboard**, which includes:
+- **System Status Overview**
+- **Backup & Restore Logs**
+- **User Management Panel**
+- **Backup Scheduling Settings**
+- **SIEM & Alert Configuration**
+
+## 2. User Management
+Admins can create, modify, or delete users:
+### Creating a New User
+1. Navigate to **User Management**.
+2. Click on **Add User**.
+3. Enter user details (Username, Role, Email, Tenant).
+4. Set permissions (Admin, Operator, Viewer).
+5. Click **Save**.
+
+### Modifying User Permissions
+1. Select a user from the list.
+2. Change the assigned role or update user details.
+3. Click **Update**.
+
+### Deleting a User
+1. Select the user to delete.
+2. Click **Remove User**.
+
+## 3. Backup Configuration
+Admins can configure automated backup schedules:
+1. Navigate to **Backup Scheduling**.
+2. Set backup frequency (Daily, Weekly, Custom).
+3. Select devices for scheduled backups.
+4. Enable **email or Slack notifications**.
+5. Click **Save Configuration**.
+
+## 4. SIEM & Notification Integration
+Admins can integrate the system with external SIEM tools and notifications:
+1. Go to **System Settings > Integrations**.
+2. Configure **Splunk, ELK, Graylog** integrations.
+3. Enable **Email, Slack, or Telegram alerts**.
+4. Save changes.
+
+## 5. Monitoring & Logs
+1. Access **Backup & Restore Logs** from the dashboard.
+2. Filter logs by **date, device type, or status**.
+3. Export logs as **PDF or Excel**.
+
+## 6. Troubleshooting
+- **User Access Issues?** Ensure correct role assignments.
+- **Backup Failures?** Check system logs for error messages.
+- **Notification Failures?** Verify SIEM and alert configuration.
+
+---
+### Versioning
+- **v1.0.0:** Initial release with user management, backup scheduling, SIEM integration.
+- **v1.1.0 (Upcoming):** Multi-tenant support & advanced analytics.
+
+**For further assistance, contact support@backupautomation.com**
+
