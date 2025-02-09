@@ -1,0 +1,86 @@
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from datetime import datetime, timedelta
+from typing import List
+from pydantic import BaseModel
+import jwt
+import os
+import json
+from fastapi.responses import FileResponse
+import pandas as pd
+
+# FastAPI uygulamasını başlat
+app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+SECRET_KEY = "supersecretkey"
+ALGORITHM = "HS256"
+
+# Mock kullanıcı verisi
+fake_users_db = {
+    "admin": {"username": "admin", "role": "admin"},
+    "operator": {"username": "operator", "role": "operator"},
+    "viewer": {"username": "viewer", "role": "viewer"}
+}
+
+# Token oluşturma fonksiyonu
+def create_access_token(username: str, role: str, expires_delta: timedelta):
+    expire = datetime.utcnow() + expires_delta
+    to_encode = {"sub": username, "role": role, "exp": expire}
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+# Kullanıcı doğrulama
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user = fake_users_db.get(payload["sub"])
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+# Backup log modeli
+class BackupLog(BaseModel):
+    timestamp: str
+    device_type: str
+    status: str
+    duration: int
+    message: str
+
+# Dummy backup logları
+backup_logs = [
+    {"timestamp": "2025-02-09T12:00:00", "device_type": "Firewall", "status": "success", "duration": 15, "message": "Backup completed"},
+    {"timestamp": "2025-02-09T12:05:00", "device_type": "Router", "status": "failed", "duration": 10, "message": "Backup failed due to network issue"},
+]
+
+# API Endpointleri
+@app.get("/logs", response_model=List[BackupLog])
+def get_logs(current_user: dict = Depends(get_current_user)):
+    return backup_logs
+
+@app.get("/user-role")
+def get_user_role(current_user: dict = Depends(get_current_user)):
+    return {"role": current_user["role"]}
+
+@app.get("/export/pdf")
+def export_pdf():
+    df = pd.DataFrame(backup_logs)
+    df.to_csv("backup_report.pdf")
+    return FileResponse("backup_report.pdf", filename="backup_report.pdf")
+
+@app.get("/export/excel")
+def export_excel():
+    df = pd.DataFrame(backup_logs)
+    df.to_excel("backup_report.xlsx", index=False)
+    return FileResponse("backup_report.xlsx", filename="backup_report.xlsx")
+
+# Yeni backup işlemi ekleme
+@app.post("/backup")
+def create_backup(log: BackupLog, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] == "viewer":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    backup_logs.append(log.dict())
+    return {"message": "Backup created successfully", "log": log}
