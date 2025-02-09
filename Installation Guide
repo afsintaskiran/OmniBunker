@@ -1,0 +1,70 @@
+# Installation Guide for Backup Automation System
+
+## Prerequisites
+Before installing the system, ensure you have the following dependencies installed:
+
+- **Docker** and **Docker Compose**
+- **Python 3.10+**
+- **Node.js & npm**
+- **Redis** (for Celery task queue)
+- **PostgreSQL** (for multi-tenancy support)
+
+## Step 1: Clone the Repository
+```bash
+git clone https://github.com/your-repo/backup-automation.git
+cd backup-automation
+```
+
+## Step 2: Set Up Backend (FastAPI)
+1. **Create a virtual environment** and install dependencies:
+   ```bash
+   python3 -m venv env
+   source env/bin/activate  # On Windows use `env\Scripts\activate`
+   pip install -r backend/requirements.txt
+   ```
+
+2. **Start the FastAPI server:**
+   ```bash
+   uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+## Step 3: Set Up Frontend (React)
+1. **Install dependencies:**
+   ```bash
+   cd frontend
+   npm install
+   ```
+2. **Start the development server:**
+   ```bash
+   npm start
+   ```
+
+## Step 4: Run Redis and Celery Worker
+1. **Start Redis:**
+   ```bash
+   redis-server
+   ```
+2. **Run Celery workers:**
+   ```bash
+   cd backend
+   celery -A tasks worker --loglevel=info
+   ```
+
+## Step 5: Deploy with Docker (Optional)
+For production deployment, use Docker Compose:
+```bash
+docker-compose up -d
+```
+
+## Step 6: Accessing the Application
+- **Frontend:** `http://localhost:3000`
+- **Backend API Docs:** `http://localhost:8000/docs`
+
+## Troubleshooting
+- **Database issues?** Ensure PostgreSQL is running and configured correctly.
+- **Frontend not starting?** Delete `node_modules` and run `npm install` again.
+- **Backend failing?** Check logs with `uvicorn backend.main:app --reload --log-level debug`.
+
+---
+**Congratulations! 🎉 Your backup automation system is now up and running!**
+
