@@ -1,0 +1,126 @@
+# Installation Guide / Kurulum Kılavuzu - OmniBunker (v1.0.0)
+
+## English Version
+
+### Prerequisites
+Ensure you have the following dependencies installed:
+- **Docker & Docker Compose**
+- **Python 3.10+ & Pip**
+- **Node.js & npm**
+- **Redis** (For Celery task queue)
+- **PostgreSQL** (For database management)
+- **VMware Workstation or ESXi** (For deploying via OVA image)
+
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/your-repo/omnibunker.git
+cd omnibunker
+```
+
+### Step 2: Backend Setup (FastAPI & Celery)
+```bash
+python3 -m venv env
+source env/bin/activate  # Windows: env\Scripts\activate
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --host 0.0.0.0 --port $FASTAPI_PORT --reload
+```
+> **Note:** Ensure the `FASTAPI_PORT` environment variable is set before running.
+> **Database Configuration:** Set `MONGO_URI` as an environment variable instead of using hardcoded values.
+
+### Step 3: Frontend Setup (React)
+```bash
+cd frontend
+npm install
+npm start
+```
+> **Note:** Ensure `.env` file contains `REACT_APP_BACKEND_URL` and `REACT_APP_DATABASE_URI` to configure API and database access dynamically.
+
+### Step 4: Redis & Celery Worker
+```bash
+redis-server
+cd backend
+celery -A tasks worker --loglevel=info
+```
+
+### Step 5: Deploy with Docker (Optional)
+```bash
+docker-compose up -d
+```
+
+### Step 6: Deploy as VMware OVA Image
+1. Download the OmniBunker OVA image from your official repository.
+2. Open **VMware Workstation** or **ESXi**.
+3. Select **File > Import OVA**.
+4. Choose the OmniBunker OVA file.
+5. Start the virtual machine.
+6. Access the application via:
+   - **Frontend:** `http://vm-ip:3000`
+   - **Backend API Docs:** `http://vm-ip:$FASTAPI_PORT/docs`
+
+### Step 7: CI/CD Pipeline Configuration (Optional)
+1. **GitHub Actions CI/CD Pipeline Setup:**
+   - Ensure the following environment variables are set before deployment:
+     ```bash
+     export FASTAPI_PORT=8000
+     export MONGO_URI="your-production-db-uri"
+     export SECRET_KEY="your-secure-secret"
+     export REACT_APP_BACKEND_URL="http://localhost:$FASTAPI_PORT"
+     export REACT_APP_DATABASE_URI="your-database-uri"
+     ```
+   - Create a `.github/workflows/main.yml` file in the repository.
+   - Add the following YAML configuration:
+     ```yaml
+     name: OmniBunker CI/CD
+     
+     on:
+       push:
+         branches:
+           - main
+     
+     jobs:
+       build:
+         runs-on: ubuntu-latest
+         steps:
+           - name: Checkout repository
+             uses: actions/checkout@v3
+     
+           - name: Set up Python
+             uses: actions/setup-python@v4
+             with:
+               python-version: "3.10"
+     
+           - name: Install dependencies
+             run: |
+               pip install -r backend/requirements.txt
+     
+           - name: Run backend tests
+             run: |
+               pytest
+     
+           - name: Build and push Docker image
+             run: |
+               docker build -t your-dockerhub-user/omnibunker:latest .
+               echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+               docker push your-dockerhub-user/omnibunker:latest
+     
+           - name: Deploy to Kubernetes
+             run: |
+               kubectl apply -f k8s/deployment.yaml
+     ```
+
+2. **Automatic Deployment:**
+   - Every push to the `main` branch will trigger:
+     - Automated testing.
+     - Docker image creation and push to DockerHub.
+     - Deployment to Kubernetes.
+
+### Troubleshooting
+- **Database issues?** Ensure PostgreSQL is running and the `MONGO_URI` environment variable is correctly set.
+- **Frontend errors?** Ensure `.env` file contains correct values for `REACT_APP_BACKEND_URL` and `REACT_APP_DATABASE_URI`.
+- **Backend errors?** Ensure `FASTAPI_PORT` is set and properly mapped.
+- **OVA import issues?** Ensure that VMware tools are installed and the network adapter is configured properly.
+- **CI/CD pipeline issues?** Check the GitHub Actions logs for failed steps.
+
+---
+
+🚀 **OmniBunker is now fully installable and configured with dynamic ports, database access, and CI/CD integration!**
