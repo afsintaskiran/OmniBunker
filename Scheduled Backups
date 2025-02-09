@@ -1,0 +1,25 @@
+from fastapi import FastAPI
+from celery import Celery
+from datetime import datetime
+import time
+
+app = FastAPI()
+
+# Celery yapılandırması
+celery = Celery(
+    "backup_tasks",
+    broker="redis://localhost:6379/0",
+    backend="redis://localhost:6379/0"
+)
+
+# Zamanlanmış yedekleme görevi
+@celery.task
+def scheduled_backup(device_type: str):
+    backup_time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    time.sleep(5)  # Simülasyon için bekleme süresi
+    return {"timestamp": backup_time, "device_type": device_type, "status": "success", "message": "Backup completed"}
+
+@app.post("/schedule-backup")
+def schedule_backup(device_type: str):
+    task = scheduled_backup.apply_async(args=[device_type], countdown=10)  # 10 saniye sonra çalıştır
+    return {"message": "Backup scheduled", "task_id": task.id}
