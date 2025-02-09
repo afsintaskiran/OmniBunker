@@ -1,0 +1,36 @@
+import smtplib
+import requests
+from fastapi import FastAPI
+
+app = FastAPI()
+
+SMTP_SERVER = "smtp.yourmail.com"
+SMTP_PORT = 587
+EMAIL_USER = "your-email@yourmail.com"
+EMAIL_PASSWORD = "your-password"
+SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/your-slack-webhook"
+TELEGRAM_BOT_TOKEN = "your-telegram-bot-token"
+TELEGRAM_CHAT_ID = "your-telegram-chat-id"
+
+@app.post("/send-alert")
+def send_alert(alert_type: str, message: str):
+    if alert_type == "email":
+        send_email_alert(message)
+    elif alert_type == "slack":
+        send_slack_alert(message)
+    elif alert_type == "telegram":
+        send_telegram_alert(message)
+    return {"status": "success", "message": f"{alert_type} alert sent"}
+
+def send_email_alert(message):
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(EMAIL_USER, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_USER, "recipient@yourmail.com", f"Subject: Backup Alert\n\n{message}")
+
+def send_slack_alert(message):
+    requests.post(SLACK_WEBHOOK_URL, json={"text": message})
+
+def send_telegram_alert(message):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": message})
